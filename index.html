@@ -936,8 +936,8 @@
     </form>
   </div>
 
-  <script>
-const scriptURL = 'http://localhost:3000/create-ticket';
+ <script>
+const scriptURL = 'https://script.google.com/macros/s/AKfycbyXkaqdZz7CmZlbFSzGPNkX27hdF7B6iBT26Di_h7N1TUaRilYyWxu3ZkeJJh7cVnE/exec';
 const form = document.forms['submit-to-zendesk'];
 
 // Create toast container if it doesn't exist
@@ -948,6 +948,7 @@ if (!toastContainer) {
   document.body.appendChild(toastContainer);
 }
 
+// Function to show toast notifications
 function showToast(message, type = 'success') {
   const toast = document.createElement('div');
   toast.className = `toast ${type}`;
@@ -961,41 +962,40 @@ function showToast(message, type = 'success') {
   }, 3000);
 }
 
-form.addEventListener('submit', e => {
+form.addEventListener('submit', async e => {
   e.preventDefault();
 
   const submitBtn = form.querySelector('button[type="submit"]');
   if (submitBtn) submitBtn.disabled = true;
 
+  // Prepare form data, replace empty values with "N/A"
   const formData = new FormData(form);
-
-  // Automatically replace empty dispositions with "N/A"
   const payload = {};
   formData.forEach((value, key) => {
     payload[key] = value.trim() || 'N/A';
   });
 
-  fetch(scriptURL, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload)
-  })
-  .then(response => response.json())
-  .then(data => {
+  try {
+    const response = await fetch(scriptURL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+
+    const data = await response.json();
+
     if (data.success) {
       showToast(`✅ Ticket created! ID: ${data.ticketId}`);
     } else {
       showToast(`❌ Error: ${data.error}`, 'error');
     }
-  })
-  .catch(error => {
-    console.error('Error!', error.message);
+  } catch (error) {
+    console.error('Error submitting form:', error);
     showToast('❌ Error submitting form. Please try again.', 'error');
-  })
-  .finally(() => {
+  } finally {
     if (submitBtn) submitBtn.disabled = false;
     form.reset();
-  });
+  }
 });
 </script>
 </body>
