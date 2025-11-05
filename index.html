@@ -170,7 +170,7 @@
 <body>
   <h1 class="form-title">SHABIKI</h1>
   <div class="form-container">
-    <form name="submit-to-google-sheet">
+    <form name="submit-to-zendesk">
       <div class="form-row">
         <div class="form-group half">
           <label class="form-label" for="number">Number</label>
@@ -937,60 +937,66 @@
   </div>
 
   <script>
-  const scriptURL = 'https://script.google.com/macros/s/AKfycbxw0gsnJ9Iyxc4gykV3LKKGOKzBPAF6d7N8FLZdKy0cUB6fUHL60ulZ-BeRvGvU8hRF-Q/exec';
-  const form = document.forms['submit-to-google-sheet'];
+const scriptURL = 'http://localhost:3000/create-ticket';
+const form = document.forms['submit-to-zendesk'];
 
-  // Create toast container
-  let toastContainer = document.getElementById('toast-container');
-  if (!toastContainer) {
-    toastContainer = document.createElement('div');
-    toastContainer.id = 'toast-container';
-    document.body.appendChild(toastContainer);
-  }
+// Create toast container if it doesn't exist
+let toastContainer = document.getElementById('toast-container');
+if (!toastContainer) {
+  toastContainer = document.createElement('div');
+  toastContainer.id = 'toast-container';
+  document.body.appendChild(toastContainer);
+}
 
-  function showToast(message, type = 'success') {
-    const toast = document.createElement('div');
-    toast.className = `toast ${type}`;
-    toast.textContent = message;
-    toastContainer.appendChild(toast);
+function showToast(message, type = 'success') {
+  const toast = document.createElement('div');
+  toast.className = `toast ${type}`;
+  toast.textContent = message;
+  toastContainer.appendChild(toast);
 
-    setTimeout(() => toast.classList.add('show'), 100);
-    setTimeout(() => {
-      toast.classList.remove('show');
-      setTimeout(() => toast.remove(), 300);
-    }, 3000);
-  }
+  setTimeout(() => toast.classList.add('show'), 100);
+  setTimeout(() => {
+    toast.classList.remove('show');
+    setTimeout(() => toast.remove(), 300);
+  }, 3000);
+}
 
-  form.addEventListener('submit', e => {
-    e.preventDefault();
+form.addEventListener('submit', e => {
+  e.preventDefault();
 
-    const submitBtn = form.querySelector('button[type="submit"]');
-    if (submitBtn) submitBtn.disabled = true;
+  const submitBtn = form.querySelector('button[type="submit"]');
+  if (submitBtn) submitBtn.disabled = true;
 
-    // ✅ Convert form data to URL-encoded string
-    const formData = new FormData(form);
-    const encodedData = new URLSearchParams(formData).toString();
+  const formData = new FormData(form);
 
-    // Show toast immediately
-    showToast('✅ Form submitted successfully!');
-    form.reset();
-
-    // Submit in background
-    fetch(scriptURL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: encodedData
-    })
-      .then(response => response.json())
-      .then(data => console.log('Server response:', data))
-      .catch(error => {
-        console.error('Error!', error.message);
-        showToast('❌ Error submitting form. Please try again.', 'error');
-      })
-      .finally(() => {
-        if (submitBtn) submitBtn.disabled = false;
-      });
+  // Automatically replace empty dispositions with "N/A"
+  const payload = {};
+  formData.forEach((value, key) => {
+    payload[key] = value.trim() || 'N/A';
   });
+
+  fetch(scriptURL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  })
+  .then(response => response.json())
+  .then(data => {
+    if (data.success) {
+      showToast(`✅ Ticket created! ID: ${data.ticketId}`);
+    } else {
+      showToast(`❌ Error: ${data.error}`, 'error');
+    }
+  })
+  .catch(error => {
+    console.error('Error!', error.message);
+    showToast('❌ Error submitting form. Please try again.', 'error');
+  })
+  .finally(() => {
+    if (submitBtn) submitBtn.disabled = false;
+    form.reset();
+  });
+});
 </script>
 </body>
 </html>
